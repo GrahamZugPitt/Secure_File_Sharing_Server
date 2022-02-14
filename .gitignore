@@ -1,0 +1,10 @@
+
+.DS_Store
+.idea
+*.class
+*.bin
+lib/*
+test/FS_key
+test/GS_key
+test/input
+test/output

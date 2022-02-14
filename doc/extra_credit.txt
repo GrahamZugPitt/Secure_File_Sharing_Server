@@ -1,0 +1,40 @@
+Phase 4
+
+We created a integration testing script to automate our previously manual testing of user input
+after changes to our code base.
+
+To run the tests, make sure you are in the main directory: cs1653-project-null/
+
+ant compile
+cd test
+bash run_integration_tests.sh
+
+Should you have any failures, you can check the output.test file to see where they occurred and what the user would have seen.
+
+
+
+------------------------
+Phase 2
+
+We created a GUI using JavaFX to be used as a User Client.
+This is much simpler to use than the terminal version.
+
+---------------
+--Compilation--
+---------------
+Compilation requires the latest version of JavaFX downloaded from: https://openjfx.io/
+
+Let $PATH_TO_FX := Path to the \lib folder of JavaFX
+
+copy the file:
+	"/extra-credit/user/javafx/FXMLDocument.fxml"
+to the directory: 
+	"/dist/user/javafx/"
+
+javac --module-path $PATH_TO_FX --add-modules javafx.controls,javafx.fxml -sourcepath extra-credit -d dist -cp dist extra-credit/*.java
+
+---------------
+------Run------
+---------------
+java --module-path $PATH_TO_FX --add-modules javafx.controls,javafx.fxml -cp dist RunUserClientGUI
+-------------------------

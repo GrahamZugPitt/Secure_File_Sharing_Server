@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CS 1653 Project P5 Writeup</title>
+  <style>
+/* BEGIN CHANGES HERE */
+
+/* In this section, you may add CSS styling if desired */
+header {
+  text-align: center;
+}
+
+/* END CHANGES HERE */
+  </style>
+  <body>
+    <header>
+      <h1>CS 1653 Project P5 Writeup</h1>
+      <h2>
+<!-- BEGIN CHANGES HERE -->
+Graham Zug &lt;gvz3@pitt.edu&gt;
+&nbsp;&bull;&nbsp;
+Jack Ullery &lt;jmu17@pitt.edu&gt;
+&nbsp;&bull;&nbsp;
+Taylor Kveragas &lt;tak121@pitt.edu&gt;
+
+
+<!-- END CHANGES HERE -->
+      </h2>
+    </header>
+    <section id="overview">
+      <h2>Overview</h2>
+<!-- BEGIN CHANGES HERE -->
+
+
+<p>
+Our primary threat model (the one we coded an attack and countermeasure for) is related to connection spam by the user. In our implementation, the group server performs a decryption operation on incoming communications. This can be exploited in the form of a Denial of Service (DoS) attack that orchestrates the connecting of clients to the server in rapid succession; each sending a garbage message that the server will waste its resources decrypting. Eventually, its resources will be consumed and no one else will be able to connect. Our countermeasure to this threat employs a challenge with cryptographically sound parameters-- the user must use a brute force hashing technique to solve it. This requires on average more resources and time than the group server will consume in a decryption operation. Once the challenge is solved, the group server will decrypt messages from the user. The challenge limits the speed at which clients can connect and trigger group server decrpytion operations, meaning that an attacker would need a great deal of computational resources to mount a DoS attack.
+</p>
+
+<p>
+In this writeup, we additionally elaborate on the threats of self destructive and malicious users, which have been mentioned in earlier phases of the project.
+</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threatmodel">
+      <h2>Threat Model</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<h3> Threat T8: Connection Spam</h3>
+<p>Due to the fact that anyone can connect to the group server from a user client, unauthenticated user clients are not to be trusted to send valid data, nor can they be trusted to be operated by a legit user of the system. As such, clients also cannot be trusted to connect with any regard to time or each other; that is, multiple clients could connect in a very narrow timeframe. Our group server expects encrypted communications, and therefore it will attempt a decryption operation on all communications it receives. Because the server has finite resources and client connections can occur in a virtually unbounded time frame, there exists a number of clients n during a time frame t at which all server resources are consumed. (n && t) can never be true-- the system must prevent the groupserver from ever running out of resources as this would make the groupserver unavailable to other users.
+</p>
+
+<h3> Threat T9: Self Destructive Users</h3>
+<p>In our previous trust models, users were trusted to protect themselves from exposure by not sharing or exposing their passwords. This will no longer be expected to be true, and users will no longer be trusted to not share their own passwords. This exposes users who either intentionally or unintentionally share their passwords with others to the threat of being impersonated, which threatens the privacy of file groups as a whole. Users must be prevented from shooting themselves in the foot in this manner. 
+</p>
+
+<h3> Threat T10: Malicious Insiders</h3>
+<p>In our previous trust models, it was assumed that if a user was in a group, that that user was to be trusted. However, in our new model, users who did not create a group will not be trusted to delete or edit files within a group. These malicious insiders will be expected to delete files or edit files in a malicious manner, compromising the dependability of our system as a file sharing service.</p>
+
+
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="attack">
+      <h2>Attacks</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<h3> Threat T8: Connection Spam</h3>
+
+<p>Our attack is a very simple denial of service attack. The plan is to connect to the server as many times as you can, as fast as your computer will let you. The code to mount this attack against our p4 build was two lines long. It is literally just opening sockets and connecting them to the group server, and then sending garbage, all in a while loop.<br><br>
+
+<code>
+while (true) {<br>
+    sock = new Socket(server, port);<br>
+    dosAttackNew(sock, fakeMessage);<br>
+}<br>
+</code>
+<br>
+
+<p>Before updating our build, this attack prevented well-meaning users from reaching the server, which meant anyone with these two lines of code could stop everyone else from accessing the group server. As clients are not trusted in our threat model to not do this, this is a very serious threat. The reason this works is that it exploits a resource disparity between the attacker and the defender. The attacker has to do nearly nothing to send a garbage message to the defending group server, whereas the server has to decode the garbage with its public key. 
+
+<br><br>
+    <img src="images/resource_disparity.png" title="Resource Disparity" class="image">
+</br>
+
+</p>
+
+<h3> Threat T9: Self Destructive Users</h3>
+<p>This attack could manifest itself in a variety of ways. Perhaps the user wants someone they know to do something for them on the file server and that person is not trusted to the group in general. Perhaps the attacker emails the user, attempting to look official, and asks the user for their username and password. Perhaps the attacker is logging the keystrokes of an ignorant user. The general idea is that users cannot be trusted to keep their passwords safe, that attackers will be looking to exploit this vulnerability, and that these attacks need to be stopped in order to maintain the integrity of the system.
+
+<br><br>
+    <img src="images/T9.png" title="Group Server Diagram" class="image">
+</br>
+
+</p>
+
+
+<h3> Threat T10: Malicious Insiders</h3>
+
+<p>This attack would not require any code or special hardware to perform-- it would result from otherwise ordinary use of the
+system. That is, the user's actions are only problematic in the context of what other members of the group think. For example,
+A user can perform remove operations on all files in a group. When other members log on and notice that the files are gone, 
+this becomes an irreversible violation of the availability of the files to this group, as they are now non-existent. To carry out
+this attack successfully, the malicious user would need to ensure that their delete operations are completed before a group member 
+can notice and remove them. This can be accomplished by using the system at a weird time or programmatically executing the delete
+operations so that a human could not react in time.</p>
+
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="countermeasure">
+      <h2>Countermeasures</h2>
+<!-- BEGIN CHANGES HERE -->
+<h3> Threat T8: Connection Spam</h3>
+<p>The aforementioned attack exploits a resource disparity between the client and group server. To mitigate the threat of this exploit, we had to ensure that the users connecting to the group server had to do more work to connect to the group server than the group server had to do to sort out connections. This inverts the resource disparity in favor of the group server, making it much more difficult to mount a denial of service attack. To make sure that the client cannot bypass doing the necessary work, we require that they complete a cryptographically sound challenge before a connection can proceed. The challenge works as follows:
+<ol>
+<li>A 24 bit number and a 256 bit number are randomly generated.</li>
+<li>These numbers are concatenated and the result is hashed using SHA-3.</li>
+<li>The user client is given the 256 bit number and the hashed result.</li>
+<li>They must respond to the group server with the 24 bit number to successfully complete the challenge.</li>
+</ol>
+
+<br><br>
+    <img src="images/countermeasure.png" title="Countermeasure: Challenge" class="image">
+</br>
+</p>
+
+
+<h3> Threat T9: Self Destructive Users</h3>
+
+<p>In order to properly install a countermeasure for this attack, we must give the user some form of authentication that is hard for the user to expose either purposefully or accidentally. In order to achieve this, users will now have their own public key/private key pair, and the user will be responsible for giving their public key to the admin after the admin has given the user their username and password. This keypair will be generated when the user first runs the UserClient software, and they will be instructed by the software to give their public key to the admin of the group server. Even though the user will see their public key, the user will never have to actively interact with the private key on their machine, making it much harder for a user to shoot themselves in the foot. </p>
+
+<p>After the admin has stored a user’s public key in the group server associated with their username, the user will be able to connect and there will be an extra step in the initial verification between the user and the group server. The verification will happen as specified in our T3 and T4 write ups, the only difference is that when the encrypted username, password, and first authentication residue are sent, they will be signed with the User’s private key and verified by the Group Server (Note: this data will be encrypted with a different symmetric key for each communication, so each time the communication happens the user will be signing effectively random data). This will ensure that even if the user has betrayed their password, an adversary will need to gain access to using their private key in order to impersonate a user. (The password is still doing some work here because without the password, any user who is not at their physical machine at all times would be exposing themselves to being impersonated by an adversary who gained access to their physical machine.
+
+<br><br>
+    <img src="images/T9.png" title="Group Server Diagram" class="image">
+</br>
+
+</p>
+
+
+<h3> Threat T10: Malicious Insiders</h3>
+
+<p>To defend against this attack, our counter measure will take a recovery based approach rather than a preventative, as this threat model is contigent on unpredictable behaviors of human beings. Preventative measures could be implemented additionally, but in doing so we would
+  need to be careful not to infringe on the usability of the system. For example, making a user get permission from the uploader of a file to delete said file could be a huge obstruction; what if said uploader doesn't use the system very often? Therefore, A version control system will be incorporated so that all previous versions of each group's files remain accessible. If a user becomes malicious and deletes all files in a group, upon noticing, group members can revert the changes back to the state before the user performed these operations and delete the member.
+</p>
+
+    </section>
+    <section id="discussion">
+      <h2>Discussion</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p> Our primary threat model is not terribly realistic for a real life file sharing system, although
+it works effectively for our system's humble use cases. This is because our countermeasure aims to 
+make the user use more resources than the group server does to establish a connection. In theory, this
+would slow the attacker down and prevent them from spamming with so many connections in such a short 
+time period. Therefore, our countermeasure relies on the assumption that the attacker has a reasonably
+limited amount of resources available to them. In a real life application, attackers can easily acquire
+more computational power whether it be by using better hardware or staging a coordinated attack with
+many machines across a network. Such an attack is known as a DDOS attack and would be very likely
+to suceed against our countermeasures.</p>
+
+<p>In designing our attacks, they were originally executed on Jack's Windows machine and succeeded. However,
+  when attempting to replicate this attack on a linux machine, it did not work. We suspect that this
+  is due to a discrepancy in these operating systems in which linux slows the attack enough that 
+the groupserver does not reach a point where it cannot use any more resources.</p>
+
+<p>In designing our new counter measures, we felt that we were building on top of what we already
+      had more than being limited by our previous counter measures. The most obvious example of this
+      is the key that signs the encrypted username and password. An implicit assumption in our
+      protection against T9 is that we are sending a different, random message to the group
+      server everytime we connect and are signing that random message with the user's private key.
+      Given out implementation, we don't even need to think about generating a random message, we 
+      could just sign one that was already going out anyway. Another consideration relating to the
+      original threats and how we protected ourselves against them, was that the new public key
+      we provide made the password much less important. We elected to kept both the password and 
+      the new key because overall it makes the system more secure but it was interesting to see
+      how what we were protecting against (malicious outsiders vs incompentent insiders) had overlapping
+      security requirements.</p>
+
+<p>Our group implemented the countermeasure pertaining to our primary threat model, and then additionally modified 
+  our attack program to accomodate the improved security of the countermeasure. We did this to confirm that our 
+  countermeasure was effective in preventing DoS attacks. Our countermeasure also includes an adjustable parameter that
+  we refer to as CHALLENGE_DIFFICULTY in our code. In short, changing this parameter changes the average amount of hash calculations
+  the user needs to perform to solve the challenge. Our incentive for keeping this value low is maintaining usability
+  to all legit users-- waiting tens of seconds for the challenge solving process to complete would not be desirable.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+  </body>
+</html>

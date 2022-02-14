@@ -1,0 +1,74 @@
+FileSharing Usage Information
+Execute all commands in the build/ directory.
+
+USAGE:
+ To start the Group Server from the console: java -cp [BOUNCYCASTLE_JAR_PATH] RunGroupServer [(optional) port number]
+ When the group server is first started, there are no users or groups. Since 
+ there must be an administer of the system, the user is prompted via the console
+ to enter a username. This name becomes the first user and is a member of the
+ ADMIN group.  Also, no groups exist.  The group server will by default
+ run on a random port, but a custom port can be passed as the first command line
+ argument.
+ 
+ To reset the Group Server, delete UserList.bin.
+ 
+ -----------------------------------------------------------------------------------------
+
+ To start the File Server from the console enter: java -cp [BOUNCYCASTLE_JAR_PATH] RunFileServer  [(optional) port number]
+ The file server will create a shared_files directory inside the working directory if one 
+ does not exist. The file server is now online.  The file server will by default
+ run on a random port, but a custom port can be passed as the first command line
+ argument.
+
+ To reset the File server completely, delete FileList.bin and the shared_files 
+ directory.
+ 
+ -----------------------------------------------------------------------------------------
+
+
+To start UserClient in console: java -cp [BOUNCYCASTLE_JAR_PATH]: RunUserClient
+
+The client will prompt you for ip address and port numbers, follow the instructions given.
+
+The first time you log in, you must use the administrator username you chose when initializing
+the group sever.
+
+Once running the client, you will see a list of options. To choose an options, type the number
+listed next to the option, then hit enter. Here is a short description of what each option does:
+
+1. Create User - adds a new user to the group server. This user has all the permissions not labeled "Admin Only" or "Group Owner Only" (If such a user creates a group, they will be able to use "Group Owner Only" operations, but only on the groups they own.) (Admin Only)
+
+2. Delete Users - removes a user from the group server, which deletes all of the groups they own and removes their username from the system. (Admin Only)
+
+3. Create Group - Creates a group that users can be added to. Any user added to a group can upload, download, see, and delete files witin the group. A user that
+creates a group owns that group. 
+
+4. Delete Group - Removes a group from the system, removing the ability to upload, download, and delete files within the group for all members. (Group Owner Only)
+
+5. Add User to Group - Adds a user to a group, giving them permission to upload, download, see, and delete files within the group. (Group Owner Only)
+
+6. Delete User From Group - Removes a user from a group, taking away the above stated permissions. 
+
+7. List Members - Lists members of a given group (Group Owner Only)
+
+8. List Groups - Lists the groups that the user is a member of.
+
+9. List Files - Lists the files in the groups the user is in.
+
+10. Upload - Uploads a file to a specified group the user is a member of from the directory the client is located in.
+
+11. Download - Downloads a file to the directory the client is located in.
+
+12. Delete - Deletes a named file in a group the user has access to.
+
+13. Disconnect - Disconnects the user from the server. 
+ -----------------------------------------------------------------------------------------
+ To attack the server with a DOS attack, run java -cp [BOUNCYCASTLE_JAR_PATH]: RunDosAttack
+ -----------------------------------------------------------------------------------------
+To start UserClientGUI with JavaFX: 
+-------- WINDOWS --------
+java --module-path path_to_javafx/lib --add-modules javafx.controls,javafx.fxml -cp dist RunUserClientGUI
+---- OTHER PLATFORMS ----
+Compile and run with JDK 1.8
+java -cp dist RunUserClientGUI
+

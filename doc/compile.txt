@@ -1,0 +1,23 @@
+Inside cs1653-project-null/ folder,
+
+First, you must obtain the following external dependencies:
+-bcprov-ext-jdk15on-166.jar from https://www.bouncycastle.org/latest_releases.html
+
+Move these external dependencies to a new directory entitled lib
+
+Now, you can compile using ant or javac.
+For installation of Ant, refer to: https://ant.apache.org/manual/install.html
+
+
+COMPILE (WITH ANT):
+> ant compile
+
+
+COMPILE (WITHOUT ANT):
+> mkdir build
+> javac -sourcepath src -d build src/*.java
+
+
+If you would like to use our JavaFX GUI, please refer to extra_credit.txt
+
+

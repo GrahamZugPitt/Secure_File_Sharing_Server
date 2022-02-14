@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CS 1653 Project P3 Writeup</title>
+  <style>
+/* BEGIN CHANGES HERE */
+
+/* In this section, you may add CSS styling if desired.
+ * Be sure your writeup still prints legibly. */
+header {
+  text-align: center;
+}
+
+/* END CHANGES HERE */
+  </style>
+  <body>
+    <header>
+      <h1>CS 1653 Project P3 Writeup</h1>
+      <h2>
+<!-- BEGIN CHANGES HERE -->
+Graham Zug &lt;gvz3@pitt.edu&gt;
+&nbsp;&bull;&nbsp;
+Jack Ullery &lt;jmu17@pitt.edu&gt;
+&nbsp;&bull;&nbsp;
+Taylor Kveragas &lt;tak121@pitt.edu&gt;
+<!-- END CHANGES HERE -->
+      </h2>
+    </header>
+    <section id="overview">
+      <h2>Overview</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>    In creating our system, we used RSA public key encryption, passwords, AES symmetric keys, the CBC block mode, and the SHA-3 hash function.
+    We used RSA public keys to establish the initial communication between servers and the client, we used symmetric keys to ensure that
+    communication between servers and the client is efficient, we used CBC block mode for semantic security, and we used the hash function to
+    minimize the size of the data to be signed by an RSA key for the sake of efficiency. Our system was designed with the assumption that admins
+    will communicate passwords to new users over a secure channel. This assumption is reasonable because there are many trustworthy ways of
+    communicating this information that our users will almost certainly have access to (gmail, for example). We also assume that admins will
+    communicate group server public keys to new users and that group owners will communicate file server public keys to group members as needed.
+    These are also both reasonable assumptions because any user using the system will almost certainly have a way of communicating information
+    over the internet (again, email) that is sufficient for this task. We will assume users will not share their passwords with anyone. This is
+    a reasonable assumption because users are personally incentivized to protect their own passwords. We will assume that we can generate
+    cryptographically secure random numbers. This is a reasonable assumption because anytime we need to generate a random number for an IV or
+    symmetric key, we will use the java SecureRandom random number generator which is cryptographically secure.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat1">
+      <h2>Threat T1: Unauthorized Token Issuance</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Unauthorized Token Issuance describes the threat of a malicious party getting a token
+    from the group server that gives them permission to do something to the file server that
+    they should not have permission to do. This could happen in a variety of ways. For
+    example, an adversary could pose as a user with a legitimate claim to the token or an
+    adversary could format a request in such a way that the group server responds with a
+    token that can be used for something the group server did not intend.</p>
+
+<p>To protect against unauthorized token issuance, we will integrate a password system. When
+    the original user is created on the group server, they will be prompted to enter a password
+    that they must remember to log in in the future. When other users are created within the system,
+    the creating user will assign them a username and the server will give them a password. This
+    original password will be known to both the “creating” and “new” user, so the new user will be
+    forced to change their password upon logging in for the first time. </p>
+
+ <p>  All group servers will have an RSA key pair. When a new user is created, the user that created
+     them will send them their username, one-time password for initial log-in, and the group server’s
+     public key. When contacting the group server, the user will send a random AES key to the group
+     server encrypted using the group server’s public key. The group server will respond with a
+     signature of the AES key (signed with the group server’s RSA key), encrypted using the AES key.
+     All communication thereafter (including logging in) will happen using the AES key in CBC mode.
+     After the user and group server are done communicating, they will both forget the AES key used for this session.</p>
+
+<p>The public key protocol allows the establishment of a shared symmetric key that is unknown to any passive adversary.
+    The protection of this key ensures that when a user communicates their password to the group server, it is not
+    exposed. The symmetric key protocol ensures that when the group server issues a token, the only person who can
+    read that token is the user that encrypted the username and password in the original step of the communication,
+    ensuring that unauthorized tokens are never issued as long as the adversary does not gain access to a user’s
+    username and password. So considering all of these factors together, we have designed a system that is safe so
+    long as a user does not reveal their password. </p>
+        <br>
+        <img src="images/Group_Server.png" title="T1 Solution" class="image">
+        </br>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat2">
+      <h2>Threat T2: Token Modification/Forgery</h2>
+<!-- BEGIN CHANGES HERE -->
+
+        <p>To protect against Token Modification/Forgery, when a Token is created by the group server, we will generate a string to represent the token.
+            Then, we will hash the contents of this string, sign the hash with the group server’s public key, and the hash along with the token.
+            This signed hash can be verified by the FileServer.</p>
+
+       <p> When the FileServer receives a token, it verifies the signature using the group server’s public RSA Key. Then the FileServer hashes the
+           contents of the token and compares it with the signed hash. If the two hashes match, then the token is valid. Otherwise, discard the token.</p>
+
+       <p> We will need to ensure that the toString() function for the token generates a unique String for every token. Furthermore, our cryptographic
+           hash function should return a unique hash for each String. To do this, we need to focus on two aspects of creating the hash: the hash algorithm,
+           what data we will be hashing. First we will use SHA-3 as our cryptographically secure hash algorithm. Second, we will create a toString method
+           for our Token. This toString method will output the issuer, subject, and the group that the Token is for. In the toString method, each section
+           of data will be delimited by a newline character. For example, every groupname will have a newline character separating them. To prevent attacks,
+           we will need to ensure that usernames, and groupnames cannot contain a newline character. If a String field does contain a newline character,
+           the toString method will throw an IllegalArgumentException.</p>
+        <br>
+        <img src="images/Group_Server.png" title="T2 Solution" class="image">
+        </br>
+
+
+        <!-- END CHANGES HERE -->
+    </section>
+    <section id="threat3">
+      <h2>Threat T3: Unauthorized File Servers</h2>
+<!-- BEGIN CHANGES HERE -->
+    <p>The threat of unauthorized file servers involves the possibility of a user attempting to connect to an authorized server s and instead connecting to a server s’.
+        If this were to happen, the user could then upload sensitive information to or download malicious information from an unauthorized server. Such a scenario could
+        very well be the result of a man in the middle attack. As our system currently stands, there is no mechanism in place to protect against this. The group server
+        is not and should not be responsible for keeping track of every file server, and the user, who communicates directly with said file servers, takes no action to
+        authenticate file servers or ensure that the server they authenticated with is the same server they are communicating with.</p>
+
+    <p>To mitigate this threat, we will make use of a client-side cache to hash public keys of servers by their respective hostnames and ports. Each time a user attempts to
+        connect, they will verify the identity of a server through a look up of the public key in their cached list of trusted servers. If lookup succeeds but the keys do
+        not match, the user will be warned of a possible man in the middle attack and the connection will be closed. Upon successful lookup and confirmation that the keys
+        match, they will use the public key to encrypt a symmetric key. This is sent to the server. The server will decrypt and use the symmetric key to encrypt an “OK”
+        message. This message is sent back to the user as confirmation. All future messages between the user and server will be encrypted with this symmetric key until the
+        connection is closed. If the server fails to send back the encrypted challenge before timeout, the connection fails and the user is warned of such.</p>
+
+    <p>If the user is connecting to a server for the first time, lookup of the public key fails, at which point they will be notified that they are attempting to connect to a
+        new server. When connecting to new servers, it will be the responsibility of the user to verify the identity of the server before they proceed. We can reasonably assume
+        that the user will be able to use trusted third-party communications to accomplish this and will only be connecting to servers that they know. Upon confirmation by the
+        user, the server’s public key will be cached.</p>
+    <p>To implement this, we will use an AES 128 bit symmetric key in CBC block mode for encryption of messages sent between the user and the server. We chose this over RSA
+        because our users and servers will at times be transmitting large files, so we need an encryption/decryption scheme that is highly efficient for large files. This key will be randomly generated for each connection. We will use RSA public key cryptography to securely send the symmetric
+        key, which serves as a mechanism to verify the identity of the server upon successfully sending back an encrypted confirmation message. The key will be of size 4096 bits,
+        as we will not be concerned with efficiency for this initial verification step.</p>
+    <p>This approach is inspired by ssh authentication in that we expect clients to keep track of server public keys. On attempting a connection with a server, the client will be
+        allowed to connect so long as the public key of the server matches that of the corresponding server in their cache. When connecting to a new server, symmetric keys are
+        exchanged securely through RSA cryptography. Because only the correct server has the private key, the symmetric key cannot be decrypted by anyone else.</p>
+
+        <br>
+        <img src="images/File_Server.png" title="T3 Solution" class="image">
+        </br>
+
+        <!-- END CHANGES HERE -->
+    </section>
+    <section id="threat4">
+      <h2>Threat T4: Information Leakage via Passive Monitoring</h2>
+<!-- BEGIN CHANGES HERE -->
+        <p>To protect against passive monitoring attacks, we will encrypt all traffic between the Group/File
+            Servers and Client. The cryptographic algorithm we use should maintain semantic security. We don’t
+            want the eavesdropper to be able to guess sent information using only the data from the packet.</p>
+
+        <p>Our goal is to protect against the leakage of actionable data. Examples of actionable data include
+            token data, file data, and authentication related data. All of this data will be sent over an insecure
+            channel. Therefore it should be protected by encryption.</p>
+
+        <p>When the client initializes communication to Group/File Servers, the y will use RSA to encrypt and send
+            a message to the server (both the group server and the file servers have public keys). This message will
+            contain the AES symmetric key that is used for the session. After the server receives the RSA message,
+            they will decrypt it and save the symmetric key. Then the server will then sign the key and send it back
+            to the client. This response will be encrypted using the symmetric key.  After the client receives and
+            decrypts this message, they know the connection has been established successfully, and they can continue
+            communicating using AES.</p>
+
+        <p>To prevent MITM attacks, the public RSA keys of both the group/file servers need to be known by the client
+            before any communication takes place. It is the responsibility of the server owners to securely communicate
+            their public keys to users.</p>
+
+        <p>Some information is difficult to hide from the eavesdropper. For example, the eavesdropper can keep track of
+            certain metadata. If a client, Bob, authenticates with the groupserver, the eavesdropper doesn’t need to read
+            encrypted data to know what is being sent. The eavesdropper knows the first packets sent by Bob will be for
+            initializing the connection, and authenticating him as a user. Similarly if Bob continues communicating with
+            the group server, the eavesdropper can assume Bob is managing groups or users. Therefore analyzing traffic
+            patterns might help the eavesdropper identify ADMINS or group leaders.</p>
+
+
+        <br>
+        <img src="images/Group_Server.png" title="T4 Solution" class="image">
+        </br>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="discussion">
+      <h2>Discussion</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Through the design process we had to work through several possible attacks. Initially,
+our solution for user verification of servers exposed us to a vulnerability that stemmed from
+a lack of freshness. In discussion, we realized that a third party could replay the user's initial message
+to the server, replay the next message, and then be authenticated. To resolve this, we decided to have the server
+randomly generate a challenge (nonce) for the user to encrypt along with a token. This mechanism ensures freshness.</p>
+
+<p>Our approach at its core relies on the reliable security and efficiency that symmetric key cryptography provides
+to facilitate secure communications and file transfers over insecure channels. To solve the key distribution problem,
+we rely on public key cryptography while also making use of hash functions to condense signed data for the sake of efficiency
+where appropriate. Random nonces are often used in our system to guarantee freshness when initializing connections between
+user client and server(s). Finally, we used hashed and salted passwords to facilitate secure user logins. Public keys are reasonably
+assumed to be shared over secure private channels, as our system operates with the assumption that individuals would know and
+trust servers they wish to connect to.
+</p>
+
+<p>For extra credit, we addressed the additional threat of group servers being compromised and therefore untrusted.
+User passwords were double hashed to prevent the possibility of rainbow dictionary attacks on the group server.</p>
+
+<p>This application has a wide array of functionality and involves client and server network communications.
+With all of these moving parts, there are a multitude of both normal use and edge cases to test. Manual testing during
+phase 2 was laborious and as such exposed bugs sometimes long after they had been integrated into the codebase. Therefore,
+we have begun incorporating an automated testing into our build to alleviate the burden of manually testing the user client.
+The testing is not yet fully implemented but should be by phase 4. </p>
+
+<!-- END CHANGES HERE -->
+    </section>
+  </body>
+</html>
+
